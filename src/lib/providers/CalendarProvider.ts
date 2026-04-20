@@ -5,6 +5,7 @@ export interface CalendarEvent {
   end: Date;
   creatorEmail?: string;
   isAllDay: boolean;
+  calendarName?: string;
   raw?: unknown;
 }
 

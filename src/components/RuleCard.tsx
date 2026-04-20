@@ -18,14 +18,23 @@ const ACTIONS: Record<ActionType, { label: string; style: string; icon: LucideIc
 
 export interface RuleCardProps {
   rule: SyncRuleRow;
+  calendarNames: Record<string, string>;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
-export const RuleCard: React.FC<RuleCardProps> = ({ rule, onToggle, onDelete }) => {
+export const RuleCard: React.FC<RuleCardProps> = ({ rule, calendarNames, onToggle, onEdit, onDelete }) => {
   const act = ACTIONS[rule.action] ?? { label: rule.action, style: "text-slate-600 bg-slate-50 ring-slate-100", icon: Copy as LucideIcon };
-  const source = PROVIDERS[rule.source_provider] ?? { label: rule.source_provider, color: "text-slate-600 bg-slate-50 ring-slate-100" };
-  const target = PROVIDERS[rule.target_provider] ?? { label: rule.target_provider, color: "text-slate-600 bg-slate-50 ring-slate-100" };
+  
+  const [sourceType] = rule.source_provider.split(":");
+  const [targetType] = rule.target_provider.split(":");
+
+  const sourceName = calendarNames[rule.source_provider] || (rule.source_provider === sourceType ? sourceType : rule.source_provider);
+  const targetName = calendarNames[rule.target_provider] || (rule.target_provider === targetType ? targetType : rule.target_provider);
+
+  const source = PROVIDERS[sourceType] ?? { label: sourceType, color: "text-slate-600 bg-slate-50 ring-slate-100" };
+  const target = PROVIDERS[targetType] ?? { label: targetType, color: "text-slate-600 bg-slate-50 ring-slate-100" };
 
   const ActionIcon = act.icon;
 
@@ -40,14 +49,22 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onToggle, onDelete }) 
       </button>
 
       {/* Provider Details */}
-      <div className="flex items-center gap-2">
-        <span className={`px-2.5 py-1 rounded-md text-[12px] font-semibold ring-1 shadow-sm ${source.color}`}>
-          {source.label}
-        </span>
-        <ArrowRight size={14} className="text-slate-300 mx-1" />
-        <span className={`px-2.5 py-1 rounded-md text-[12px] font-semibold ring-1 shadow-sm ${target.color}`}>
-          {target.label}
-        </span>
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col">
+          <span className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase tracking-wider font-bold truncate max-w-[120px] mb-1 ${source.color}`}>
+            {source.label}
+          </span>
+          <span className="text-[13px] font-bold text-slate-700 truncate max-w-[150px]">{sourceName}</span>
+        </div>
+        
+        <ArrowRight size={16} className="text-slate-300 mx-2" />
+        
+        <div className="flex flex-col">
+          <span className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase tracking-wider font-bold truncate max-w-[120px] mb-1 ${target.color}`}>
+            {target.label}
+          </span>
+          <span className="text-[13px] font-bold text-slate-700 truncate max-w-[150px]">{targetName}</span>
+        </div>
       </div>
 
       <div className="flex-1" />
@@ -63,9 +80,14 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onToggle, onDelete }) 
         <span className="text-[13px] text-slate-700 font-bold tabular-nums leading-none">{rule.look_ahead_days}日</span>
       </div>
 
-      <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors group">
-        <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button onClick={onEdit} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors group">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+        <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors group">
+          <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
     </div>
   );
 };

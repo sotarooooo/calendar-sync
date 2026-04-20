@@ -14,6 +14,7 @@ async function main() {
     requireEnv("TIMETREE_EMAIL"),
     requireEnv("TIMETREE_PASSWORD"),
     process.env["TIMETREE_CALENDAR_ID"] ? Number(process.env["TIMETREE_CALENDAR_ID"]) : undefined,
+    process.env["TIMETREE_AUTHOR_ID"] ? Number(process.env["TIMETREE_AUTHOR_ID"]) : undefined
   );
 
   const gcal = new GoogleCalendarProvider({

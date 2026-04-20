@@ -26,12 +26,47 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    return this._fetchEventsFromCalendar(this.calendarId, from, to);
+  }
+
+  async getAllEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    const res = await this.calendar.calendarList.list();
+    const calendars = res.data.items ?? [];
+    
+    const allEvents: CalendarEvent[] = [];
+    await Promise.all(
+      calendars.map(async (cal) => {
+        if (!cal.id) return;
+        try {
+          const events = await this._fetchEventsFromCalendar(cal.id, from, to);
+          // 所属するカレンダーの名前を持たせる
+          events.forEach(e => e.calendarName = cal.summary ?? "Unknown");
+          allEvents.push(...events);
+        } catch (e) {
+          // 権限がないカレンダーなどは無視
+          console.error(`Failed to fetch from Google Calendar: ${cal.id}`);
+        }
+      })
+    );
+    return allEvents;
+  }
+
+  async getAllCalendars() {
+    const res = await this.calendar.calendarList.list();
+    return (res.data.items ?? []).map(cal => ({
+      id: cal.id,
+      name: cal.summary,
+      color: cal.backgroundColor
+    }));
+  }
+
+  private async _fetchEventsFromCalendar(calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]> {
     const events: CalendarEvent[] = [];
     let pageToken: string | undefined;
 
     do {
       const res = await this.calendar.events.list({
-        calendarId: this.calendarId,
+        calendarId,
         timeMin: from.toISOString(),
         timeMax: to.toISOString(),
         singleEvents: true,
@@ -42,6 +77,9 @@ export class GoogleCalendarProvider implements CalendarProvider {
 
       for (const item of res.data.items ?? []) {
         if (!item.id || !item.start) continue;
+
+        // ご自身（GOOGLE_OWNER_EMAIL）以外の予定を抽出対象から完全に除外する
+        if (item.creator?.email && item.creator.email !== this.ownerEmail) continue;
 
         const isAllDay = !!item.start.date;
         const start = new Date(item.start.dateTime ?? item.start.date!);

@@ -10,6 +10,8 @@ import { Layers, Plus } from "lucide-react";
 export default function RulesPage() {
   const [rules, setRules] = useState<SyncRuleRow[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingRule, setEditingRule] = useState<SyncRuleRow | null>(null);
+  const [calendarNames, setCalendarNames] = useState<Record<string, string>>({});
 
   const fetchRules = useCallback(async () => {
     const res = await fetch("/api/rules");
@@ -18,6 +20,16 @@ export default function RulesPage() {
 
   useEffect(() => {
     fetchRules();
+    // カレンダーの名前一覧を取得
+    Promise.all([
+      fetch("/api/calendars/google").then(r => r.ok ? r.json() : []),
+      fetch("/api/calendars/timetree").then(r => r.ok ? r.json() : [])
+    ]).then(([gcData, ttData]) => {
+      const map: Record<string, string> = {};
+      if (Array.isArray(gcData)) gcData.forEach(c => map[`google_calendar:${c.id}`] = c.name);
+      if (Array.isArray(ttData)) ttData.forEach(c => map[`timetree:${c.id}`] = c.name);
+      setCalendarNames(map);
+    }).catch(console.error);
   }, [fetchRules]);
 
   async function deleteRule(id: string) {
@@ -76,7 +88,9 @@ export default function RulesPage() {
             <div key={rule.id} className="transform hover:scale-[1.01] transition-transform">
               <RuleCard
                 rule={rule}
+                calendarNames={calendarNames}
                 onToggle={() => toggleRule(rule.id, rule.enabled)}
+                onEdit={() => setEditingRule(rule)}
                 onDelete={() => deleteRule(rule.id)}
               />
             </div>
@@ -88,6 +102,14 @@ export default function RulesPage() {
         <AddRuleModal
           onClose={() => setShowAdd(false)}
           onCreated={() => { setShowAdd(false); fetchRules(); }}
+        />
+      )}
+
+      {editingRule && (
+        <AddRuleModal
+          initialRule={editingRule}
+          onClose={() => setEditingRule(null)}
+          onCreated={() => { setEditingRule(null); fetchRules(); }}
         />
       )}
     </div>

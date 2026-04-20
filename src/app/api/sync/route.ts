@@ -12,19 +12,22 @@ function env(key: string): string {
 }
 
 function buildProvider(name: string) {
-  if (name === "timetree") {
+  const [providerType, configId] = name.split(":");
+
+  if (providerType === "timetree") {
     return new TimeTreeProvider(
       env("TIMETREE_EMAIL"),
       env("TIMETREE_PASSWORD"),
-      process.env["TIMETREE_CALENDAR_ID"] ? Number(process.env["TIMETREE_CALENDAR_ID"]) : undefined,
+      configId ? Number(configId) : (process.env["TIMETREE_CALENDAR_ID"] ? Number(process.env["TIMETREE_CALENDAR_ID"]) : undefined),
+      process.env["TIMETREE_AUTHOR_ID"] ? Number(process.env["TIMETREE_AUTHOR_ID"]) : undefined
     );
   }
-  if (name === "google_calendar") {
+  if (providerType === "google_calendar") {
     return new GoogleCalendarProvider({
       clientId: env("GOOGLE_CLIENT_ID"),
       clientSecret: env("GOOGLE_CLIENT_SECRET"),
       refreshToken: env("GOOGLE_REFRESH_TOKEN"),
-      calendarId: process.env["GOOGLE_CALENDAR_ID"] ?? "primary",
+      calendarId: configId || process.env["GOOGLE_CALENDAR_ID"] || "primary",
       ownerEmail: env("GOOGLE_OWNER_EMAIL"),
     });
   }

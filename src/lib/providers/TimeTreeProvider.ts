@@ -12,6 +12,7 @@ interface TimeTreeRawEvent {
   all_day: boolean;
   type: number;
   category: number;
+  author_id: number;
 }
 
 interface TimeTreeCalendarMeta {
@@ -26,17 +27,24 @@ interface EventSyncResponse {
   since: number;
 }
 
+import * as fs from "fs";
+import * as path from "path";
+
+const getSessionFilePath = () => path.join(process.cwd(), ".timetree_session");
+
 export class TimeTreeProvider implements CalendarProvider {
   readonly name = "TimeTree";
   private sessionId: string | null = null;
   private readonly email: string;
   private readonly password: string;
   private calendarId: number | null;
+  private readonly authorId?: number;
 
-  constructor(email: string, password: string, calendarId?: number) {
+  constructor(email: string, password: string, calendarId?: number, authorId?: number) {
     this.email = email;
     this.password = password;
     this.calendarId = calendarId ?? null;
+    this.authorId = authorId;
   }
 
   private async login(): Promise<void> {
@@ -78,15 +86,29 @@ export class TimeTreeProvider implements CalendarProvider {
   }
 
   private async ensureSession(): Promise<void> {
+    const sessionFile = getSessionFilePath();
     if (!this.sessionId) {
-      await this.login();
+      if (fs.existsSync(sessionFile)) {
+        try {
+          this.sessionId = fs.readFileSync(sessionFile, "utf-8").trim();
+        } catch (e) {
+          // ignore read error
+        }
+      }
+      
+      if (!this.sessionId) {
+        await this.login();
+        if (this.sessionId) {
+          fs.writeFileSync(sessionFile, this.sessionId, "utf-8");
+        }
+      }
     }
   }
 
-  private async apiGet<T>(path: string): Promise<T> {
+  private async apiGet<T>(pathUrl: string): Promise<T> {
     await this.ensureSession();
 
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API_BASE}${pathUrl}`, {
       headers: {
         "Content-Type": "application/json",
         "X-Timetreea": USER_AGENT,
@@ -96,8 +118,15 @@ export class TimeTreeProvider implements CalendarProvider {
 
     if (res.status === 401) {
       this.sessionId = null;
+      const sessionFile = getSessionFilePath();
+      if (fs.existsSync(sessionFile)) {
+        fs.unlinkSync(sessionFile);
+      }
       await this.login();
-      return this.apiGet(path);
+      if (this.sessionId) {
+        fs.writeFileSync(sessionFile, this.sessionId, "utf-8");
+      }
+      return this.apiGet(pathUrl);
     }
 
     if (!res.ok) {
@@ -130,12 +159,13 @@ export class TimeTreeProvider implements CalendarProvider {
   }
 
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    const calendars = await this.getCalendars();
     if (!this.calendarId) {
-      const calendars = await this.getCalendars();
       if (calendars.length === 0) throw new Error("No TimeTree calendars found");
       this.calendarId = calendars[0].id;
       console.log(`[TimeTree] Using calendar: "${calendars[0].name}" (id: ${this.calendarId})`);
     }
+    const currentCal = calendars.find(c => c.id === this.calendarId) || calendars[0];
 
     const rawEvents = await this.fetchAllEvents(this.calendarId);
     const fromMs = from.getTime();
@@ -144,6 +174,7 @@ export class TimeTreeProvider implements CalendarProvider {
     return rawEvents
       .filter((ev) => {
         if (ev.category === 2) return false;
+        if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;
         return ev.start_at < toMs && ev.end_at > fromMs;
       })
       .map((ev) => ({
@@ -152,8 +183,45 @@ export class TimeTreeProvider implements CalendarProvider {
         start: new Date(ev.start_at),
         end: new Date(ev.end_at),
         isAllDay: ev.all_day,
+        calendarName: currentCal.name,
         raw: ev,
       }));
+  }
+
+  async getAllEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    const calendars = await this.getCalendars();
+    const fromMs = from.getTime();
+    const toMs = to.getTime();
+
+    const allEvents: CalendarEvent[] = [];
+
+    await Promise.all(
+      calendars.map(async (cal) => {
+        try {
+          const rawEvents = await this.fetchAllEvents(cal.id);
+          const mapped = rawEvents
+            .filter((ev) => {
+              if (ev.category === 2) return false;
+              if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;
+              return ev.start_at < toMs && ev.end_at > fromMs;
+            })
+            .map((ev) => ({
+              id: `${cal.id}-${ev.uuid}`,
+              title: ev.title,
+              start: new Date(ev.start_at),
+              end: new Date(ev.end_at),
+              isAllDay: ev.all_day,
+              calendarName: cal.name,
+              raw: ev,
+            }));
+          allEvents.push(...mapped);
+        } catch (e) {
+          console.error(`Failed to fetch TimeTree calendar ${cal.id}:`, e);
+        }
+      })
+    );
+
+    return allEvents;
   }
 
   async deleteEvent(_eventId: string): Promise<void> {

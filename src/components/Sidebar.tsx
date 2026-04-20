@@ -3,12 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, GitMerge, ListFilter, Activity, ChevronsUpDown, CalendarSync, Sparkles } from "lucide-react";
+import { LayoutDashboard, GitMerge, ListFilter, Activity, ChevronsUpDown, CalendarSync, Sparkles, CalendarDays } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/rules", label: "ルール設定", icon: GitMerge },
   { href: "/logs", label: "アクセスログ", icon: ListFilter },
+  { href: "/calendar", label: "カレンダー", icon: CalendarDays },
 ];
 
 export const Sidebar: React.FC = () => {

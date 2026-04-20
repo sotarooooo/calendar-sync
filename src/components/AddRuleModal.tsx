@@ -17,14 +17,42 @@ type ActionType = SyncRuleRow["action"];
 export interface AddRuleModalProps {
   onClose: () => void;
   onCreated: () => void;
+  initialRule?: SyncRuleRow;
 }
 
-export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }) => {
-  const [source, setSource] = useState<ProviderType>("timetree");
-  const [target, setTarget] = useState<ProviderType>("google_calendar");
-  const [action, setAction] = useState<ActionType>("delete_overlap");
-  const [days, setDays] = useState<number>(14);
+export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated, initialRule }) => {
+  const [source, setSource] = useState<string>(initialRule?.source_provider || "timetree");
+  const [target, setTarget] = useState<string>(initialRule?.target_provider || "google_calendar");
+  const [action, setAction] = useState<ActionType>(initialRule?.action || "delete_overlap");
+  const [days, setDays] = useState<number>(initialRule?.look_ahead_days || 14);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [gCalendars, setGCalendars] = useState<{id: string, name: string}[]>([]);
+  const [tCalendars, setTCalendars] = useState<{id: number, name: string}[]>([]);
+
+  React.useEffect(() => {
+    Promise.all([
+      fetch("/api/calendars/google").then(r => r.ok ? r.json() : []),
+      fetch("/api/calendars/timetree").then(r => r.ok ? r.json() : [])
+    ])
+    .then(([gcData, ttData]) => {
+      if (Array.isArray(gcData)) {
+        setGCalendars(gcData);
+        if (gcData.length > 0 && !initialRule?.target_provider) {
+          setTarget(`google_calendar:${gcData[0].id}`);
+        }
+      }
+      if (Array.isArray(ttData)) {
+        setTCalendars(ttData);
+        // 旧形式("timetree")からのアップグレード、または新規作成時の初期値セット
+        if (ttData.length > 0) {
+          if (!initialRule?.source_provider || initialRule.source_provider === "timetree") {
+            setSource(`timetree:${ttData[0].id}`);
+          }
+        }
+      }
+    })
+    .catch(console.error);
+  }, [initialRule]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,8 +65,14 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }
         look_ahead_days: days,
       };
       
+      if (initialRule) {
+        payload.id = initialRule.id;
+      }
+      
+      const method = initialRule ? "PATCH" : "POST";
+
       const res = await fetch("/api/rules", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -57,7 +91,7 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }
         <div className="px-6 py-4 border-b border-slate-100 bg-white/50 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-800">
             <Zap size={18} className="text-blue-500" />
-            <h3 className="font-bold text-[15px]">新しい同期ルールを作成</h3>
+            <h3 className="font-bold text-[15px]">{initialRule ? "ルールを編集" : "新しい同期ルールを作成"}</h3>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 rounded-lg transition-colors">
             <X size={18} />
@@ -73,10 +107,16 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }
               </span>
               <select
                 value={source}
-                onChange={(e) => setSource(e.target.value as ProviderType)}
+                onChange={(e) => setSource(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm outline-none"
               >
-                {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                {tCalendars.length === 0 ? (
+                  <option value="timetree">TimeTree (読込中...)</option>
+                ) : (
+                  tCalendars.map((cal) => (
+                    <option key={cal.id} value={`timetree:${cal.id}`}>TimeTree: {cal.name}</option>
+                  ))
+                )}
               </select>
             </label>
             <label className="block space-y-1.5">
@@ -86,10 +126,16 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }
               </span>
               <select
                 value={target}
-                onChange={(e) => setTarget(e.target.value as ProviderType)}
+                onChange={(e) => setTarget(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm outline-none"
               >
-                {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                {gCalendars.length === 0 ? (
+                  <option value="google_calendar">Google Calendar (読込中...)</option>
+                ) : (
+                  gCalendars.map((cal) => (
+                    <option key={cal.id} value={`google_calendar:${cal.id}`}>Google: {cal.name}</option>
+                  ))
+                )}
               </select>
             </label>
           </div>
@@ -148,7 +194,7 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({ onClose, onCreated }
                 )
               }
             >
-              {submitting ? "保存中..." : "ルールを作成"}
+              {submitting ? "保存中..." : (initialRule ? "変更を保存" : "ルールを作成")}
             </Button>
           </div>
         </form>

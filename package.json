@@ -1,0 +1,23 @@
+{
+  "name": "calendar-sync",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "sync": "tsx src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "sotarooooo",
+  "license": "ISC",
+  "description": "Sync calendar events between TimeTree and Google Calendar",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "googleapis": "^171.4.0",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0"
+  }
+}

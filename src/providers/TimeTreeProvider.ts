@@ -144,15 +144,13 @@ export class TimeTreeProvider implements CalendarProvider {
     return rawEvents
       .filter((ev) => {
         if (ev.category === 2) return false;
-        const startMs = ev.start_at * 1000;
-        const endMs = ev.end_at * 1000;
-        return startMs < toMs && endMs > fromMs;
+        return ev.start_at < toMs && ev.end_at > fromMs;
       })
       .map((ev) => ({
         id: ev.uuid,
         title: ev.title,
-        start: new Date(ev.start_at * 1000),
-        end: new Date(ev.end_at * 1000),
+        start: new Date(ev.start_at),
+        end: new Date(ev.end_at),
         isAllDay: ev.all_day,
         raw: ev,
       }));

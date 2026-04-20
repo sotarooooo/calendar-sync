@@ -27,8 +27,18 @@ const CustomToolbar = (toolbar: any) => {
   const goToNext = () => toolbar.onNavigate("NEXT");
   const goToCurrent = () => toolbar.onNavigate("TODAY");
   const label = () => {
-    const date = format(toolbar.date, "yyyy年 M月", { locale: ja });
-    return <span className="font-bold text-lg text-slate-800">{date}</span>;
+    let text: string;
+    if (toolbar.view === "month") {
+      text = format(toolbar.date, "yyyy年 M月", { locale: ja });
+    } else if (toolbar.view === "week") {
+      const weekStart = startOfWeek(toolbar.date, { locale: ja });
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      text = `${format(weekStart, "M月d日", { locale: ja })} – ${format(weekEnd, "M月d日", { locale: ja })}`;
+    } else {
+      text = format(toolbar.date, "yyyy年 M月d日(E)", { locale: ja });
+    }
+    return <span className="font-bold text-lg text-slate-800">{text}</span>;
   };
 
   return (
@@ -62,6 +72,57 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<View>(Views.MONTH);
   const [hiddenCalendars, setHiddenCalendars] = useState<Set<string>>(new Set());
+  const calendarRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = calendarRef.current;
+    if (!container) return;
+
+    let prevCell: Element | null = null;
+
+    const handleMove = (e: MouseEvent) => {
+      const monthView = container.querySelector(".rbc-month-view");
+      if (!monthView) return;
+
+      const rows = monthView.querySelectorAll(".rbc-month-row");
+      let matched: Element | null = null;
+
+      for (const row of rows) {
+        const rowRect = row.getBoundingClientRect();
+        if (e.clientY < rowRect.top || e.clientY > rowRect.bottom) continue;
+
+        const bgRow = row.querySelector(".rbc-row-bg");
+        if (!bgRow) break;
+        const cells = bgRow.querySelectorAll(".rbc-day-bg");
+        for (const cell of cells) {
+          const r = cell.getBoundingClientRect();
+          if (e.clientX >= r.left && e.clientX <= r.right) {
+            matched = cell;
+            break;
+          }
+        }
+        break;
+      }
+
+      if (matched !== prevCell) {
+        prevCell?.classList.remove("day-hover");
+        matched?.classList.add("day-hover");
+        prevCell = matched;
+      }
+    };
+
+    const handleLeave = () => {
+      prevCell?.classList.remove("day-hover");
+      prevCell = null;
+    };
+
+    container.addEventListener("mousemove", handleMove);
+    container.addEventListener("mouseleave", handleLeave);
+    return () => {
+      container.removeEventListener("mousemove", handleMove);
+      container.removeEventListener("mouseleave", handleLeave);
+    };
+  }, [view]);
 
   const fetchEvents = useCallback(async (date: Date) => {
     setLoading(true);
@@ -149,10 +210,10 @@ export default function CalendarPage() {
               const isTT = firstEv?.provider === "timetree";
               return (
                 <label key={calName} className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100">
-                  <input 
-                    type="checkbox" 
-                    checked={!isHidden} 
-                    onChange={() => toggleCalendar(calName)} 
+                  <input
+                    type="checkbox"
+                    checked={!isHidden}
+                    onChange={() => toggleCalendar(calName)}
                     className="w-3.5 h-3.5 rounded-sm accent-slate-800"
                   />
                   <span className={isTT ? "text-emerald-700" : "text-blue-700"}>
@@ -180,17 +241,32 @@ export default function CalendarPage() {
 
       <Card variant="glassPadded" className="p-4 bg-white/70 overflow-hidden">
         {/* CSS override for Big Calendar to look modern */}
-        <style dangerouslySetInnerHTML={{__html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .rbc-month-view { border-radius: 12px; overflow: hidden; border-color: #e2e8f0; border-width: 2px; }
           .rbc-header { padding: 12px 0; font-weight: 800; color: #475569; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
           .rbc-day-bg + .rbc-day-bg { border-left: 2px solid #e2e8f0; }
           .rbc-month-row + .rbc-month-row { border-top: 2px solid #e2e8f0; }
-          .rbc-date-cell { font-weight: 700; padding: 4px 8px; color: #64748b; }
+          .rbc-date-cell { font-weight: 700; padding: 4px 8px; color: #64748b; cursor: pointer; }
+          .rbc-day-bg { cursor: pointer; transition: background 0.15s; }
+          .rbc-month-view .rbc-day-bg:hover,
+          .rbc-month-view .rbc-day-bg.day-hover { background: #e2e8f0 !important; }
           .rbc-off-range-bg { background: #f8fafc; }
-          .rbc-today { background: #bfdbfe; font-weight: 900; }
+          .rbc-today { background: #eff6ff; font-weight: 900; }
           .rbc-event { padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+          .rbc-time-view .rbc-header.rbc-today { background: #dbeafe; color: #1e40af; }
+          .rbc-time-view .rbc-today .rbc-events-container { background: transparent; }
+          .rbc-time-view .rbc-day-slot.rbc-today { background: #eff6ff; }
+          .rbc-time-header-content { border-left: none; }
+          .rbc-time-view .rbc-header { text-align: center; padding: 8px 0; }
+          .rbc-time-view .rbc-allday-cell { display: none; }
+          .rbc-time-view .rbc-time-content { border-top: 2px solid #e2e8f0; }
+          .rbc-time-view { border-radius: 12px; overflow: hidden; border-color: #e2e8f0; border-width: 2px; }
+          .rbc-time-header-gutter { min-width: 60px; }
+          .rbc-label { font-size: 11px; font-weight: 700; color: #94a3b8; }
         `}} />
-        <div className="h-[700px]">
+        <div ref={calendarRef} className="h-[700px]">
           <Calendar
             localizer={localizer}
             events={mappedEvents}
@@ -202,16 +278,28 @@ export default function CalendarPage() {
             onNavigate={(newDate) => setCurrentDate(newDate)}
             view={view}
             onView={(newView) => setView(newView)}
+            selectable
+            onSelectSlot={(slotInfo) => {
+              if (view === Views.MONTH) {
+                setCurrentDate(slotInfo.start);
+                setView(Views.DAY);
+              }
+            }}
+            onDrillDown={(date) => {
+              setCurrentDate(date);
+              setView(Views.DAY);
+            }}
+            getDrilldownView={() => null}
             components={{
               toolbar: CustomToolbar
             }}
             formats={{
-               dayFormat: (date, culture, localizer) =>
-                 localizer!.format(date, "E", culture),
-               dayHeaderFormat: (date, culture, localizer) =>
-                 localizer!.format(date, "M月d日 E", culture),
-               monthHeaderFormat: (date, culture, localizer) =>
-                 localizer!.format(date, "yyyy年 M月", culture),
+              dayFormat: (date, culture, localizer) =>
+                localizer!.format(date, "d日(E)", culture),
+              dayHeaderFormat: (date, culture, localizer) =>
+                localizer!.format(date, "M月d日(E)", culture),
+              monthHeaderFormat: (date, culture, localizer) =>
+                localizer!.format(date, "yyyy年 M月", culture),
             }}
           />
         </div>

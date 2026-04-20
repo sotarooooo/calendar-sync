@@ -111,6 +111,26 @@ export class GoogleCalendarProvider implements CalendarProvider {
     });
   }
 
+  async updateEvent(eventId: string, patch: {
+    start: Date;
+    end: Date;
+    isAllDay: boolean;
+  }): Promise<void> {
+    const body: calendar_v3.Schema$Event = {};
+    if (patch.isAllDay) {
+      body.start = { date: patch.start.toISOString().split("T")[0] };
+      body.end = { date: patch.end.toISOString().split("T")[0] };
+    } else {
+      body.start = { dateTime: patch.start.toISOString(), timeZone: "Asia/Tokyo" };
+      body.end = { dateTime: patch.end.toISOString(), timeZone: "Asia/Tokyo" };
+    }
+    await this.calendar.events.patch({
+      calendarId: this.calendarId,
+      eventId,
+      requestBody: body,
+    });
+  }
+
   async createEvent(event: {
     title: string;
     start: Date;

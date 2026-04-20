@@ -2,15 +2,18 @@
 
 import React from "react";
 import type { SyncLogRow } from "@/lib/supabase";
-import { CheckCircle2, XCircle, Trash2, Copy, AlertCircle, LucideIcon } from "lucide-react";
+import { CheckCircle2, XCircle, Trash2, Copy, AlertCircle, Scissors, SplitSquareHorizontal, LucideIcon } from "lucide-react";
 
-type ActionType = "deleted" | "copied" | "delete_failed" | "copy_failed";
+type ActionType = "deleted" | "copied" | "trimmed" | "split_created" | "delete_failed" | "copy_failed" | "trim_failed";
 
 const ACTION_MAP: Record<ActionType, { label: string; icon: LucideIcon; color: string }> = {
   deleted: { label: "削除", icon: Trash2, color: "text-rose-500 bg-rose-50" },
   copied: { label: "コピー", icon: Copy, color: "text-blue-500 bg-blue-50" },
+  trimmed: { label: "トリミング", icon: Scissors, color: "text-orange-500 bg-orange-50" },
+  split_created: { label: "分割作成", icon: SplitSquareHorizontal, color: "text-violet-500 bg-violet-50" },
   delete_failed: { label: "削除失敗", icon: AlertCircle, color: "text-amber-500 bg-amber-50" },
   copy_failed: { label: "コピー失敗", icon: AlertCircle, color: "text-amber-500 bg-amber-50" },
+  trim_failed: { label: "トリミング失敗", icon: AlertCircle, color: "text-amber-500 bg-amber-50" },
 };
 
 export interface LogTableProps {

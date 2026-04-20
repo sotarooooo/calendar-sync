@@ -11,10 +11,11 @@ function env(key: string): string {
 export type FrontendEvent = {
   id: string;
   title: string;
-  start: string; // ISO string
-  end: string;   // ISO string
+  start: string;
+  end: string;
   isAllDay: boolean;
   provider: "timetree" | "google_calendar";
+  calendarName?: string;
 };
 
 export async function GET(request: Request) {

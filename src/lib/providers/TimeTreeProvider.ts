@@ -27,10 +27,41 @@ interface EventSyncResponse {
   since: number;
 }
 
-import * as fs from "fs";
-import * as path from "path";
+const isServerless = !!process.env["VERCEL"];
 
-const getSessionFilePath = () => path.join(process.cwd(), ".timetree_session");
+function readSessionFile(): string | null {
+  if (isServerless) return null;
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    return fs.readFileSync(path.join(process.cwd(), ".timetree_session"), "utf-8").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionFile(sessionId: string): void {
+  if (isServerless) return;
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.writeFileSync(path.join(process.cwd(), ".timetree_session"), sessionId, "utf-8");
+  } catch {
+    // ignore write errors
+  }
+}
+
+function deleteSessionFile(): void {
+  if (isServerless) return;
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const p = path.join(process.cwd(), ".timetree_session");
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+  } catch {
+    // ignore
+  }
+}
 
 export class TimeTreeProvider implements CalendarProvider {
   readonly name = "TimeTree";
@@ -86,20 +117,12 @@ export class TimeTreeProvider implements CalendarProvider {
   }
 
   private async ensureSession(): Promise<void> {
-    const sessionFile = getSessionFilePath();
     if (!this.sessionId) {
-      if (fs.existsSync(sessionFile)) {
-        try {
-          this.sessionId = fs.readFileSync(sessionFile, "utf-8").trim();
-        } catch (e) {
-          // ignore read error
-        }
-      }
-      
+      this.sessionId = readSessionFile();
       if (!this.sessionId) {
         await this.login();
         if (this.sessionId) {
-          fs.writeFileSync(sessionFile, this.sessionId, "utf-8");
+          writeSessionFile(this.sessionId);
         }
       }
     }
@@ -118,13 +141,10 @@ export class TimeTreeProvider implements CalendarProvider {
 
     if (res.status === 401) {
       this.sessionId = null;
-      const sessionFile = getSessionFilePath();
-      if (fs.existsSync(sessionFile)) {
-        fs.unlinkSync(sessionFile);
-      }
+      deleteSessionFile();
       await this.login();
       if (this.sessionId) {
-        fs.writeFileSync(sessionFile, this.sessionId, "utf-8");
+        writeSessionFile(this.sessionId);
       }
       return this.apiGet(pathUrl);
     }

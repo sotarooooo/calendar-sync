@@ -11,8 +11,9 @@ function requireEnv(key: string): string {
 
 async function main() {
   const timetree = new TimeTreeProvider(
-    requireEnv("TIMETREE_API_TOKEN"),
-    requireEnv("TIMETREE_CALENDAR_ID"),
+    requireEnv("TIMETREE_EMAIL"),
+    requireEnv("TIMETREE_PASSWORD"),
+    process.env["TIMETREE_CALENDAR_ID"] ? Number(process.env["TIMETREE_CALENDAR_ID"]) : undefined,
   );
 
   const gcal = new GoogleCalendarProvider({

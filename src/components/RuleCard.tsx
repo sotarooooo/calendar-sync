@@ -2,14 +2,14 @@
 
 import type { SyncRuleRow } from "@/lib/supabase";
 
-const PROVIDERS: Record<string, { label: string; icon: string; color: string }> = {
-  timetree: { label: "TimeTree", icon: "🌳", color: "bg-green-500/10 text-green-400" },
-  google_calendar: { label: "Google Calendar", icon: "📅", color: "bg-blue-500/10 text-blue-400" },
+const PROVIDERS: Record<string, { label: string; color: string; bg: string }> = {
+  timetree: { label: "TimeTree", color: "text-green-700", bg: "bg-green-50 border-green-200" },
+  google_calendar: { label: "Google Calendar", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
 };
 
-const ACTIONS: Record<string, { label: string; color: string }> = {
-  delete_overlap: { label: "重複を削除", color: "bg-red-500/10 text-red-400 border-red-500/20" },
-  copy: { label: "予定をコピー", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+const ACTIONS: Record<string, { label: string; color: string; bg: string }> = {
+  delete_overlap: { label: "重複削除", color: "text-red-700", bg: "bg-red-50 border-red-200" },
+  copy: { label: "コピー", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
 };
 
 export default function RuleCard({
@@ -21,58 +21,49 @@ export default function RuleCard({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const src = PROVIDERS[rule.source_provider] ?? { label: rule.source_provider, icon: "📎", color: "bg-muted/10 text-muted" };
-  const tgt = PROVIDERS[rule.target_provider] ?? { label: rule.target_provider, icon: "📎", color: "bg-muted/10 text-muted" };
-  const act = ACTIONS[rule.action] ?? { label: rule.action, color: "bg-muted/10 text-muted" };
+  const src = PROVIDERS[rule.source_provider] ?? { label: rule.source_provider, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
+  const tgt = PROVIDERS[rule.target_provider] ?? { label: rule.target_provider, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
+  const act = ACTIONS[rule.action] ?? { label: rule.action, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
 
   return (
-    <div className={`bg-card border border-border rounded-xl p-4 flex items-center gap-4 transition-opacity ${!rule.enabled ? "opacity-50" : ""}`}>
-      {/* Toggle */}
+    <div className={`bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3 transition-opacity ${!rule.enabled ? "opacity-40" : ""}`}>
       <button
         onClick={onToggle}
-        className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${
-          rule.enabled ? "bg-accent" : "bg-input"
+        className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
+          rule.enabled ? "bg-accent" : "bg-border"
         }`}
       >
         <span
-          className={`absolute top-[3px] w-4 h-4 rounded-full bg-white transition-all ${
-            rule.enabled ? "left-[22px]" : "left-[3px]"
+          className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${
+            rule.enabled ? "left-[18px]" : "left-[2px]"
           }`}
         />
       </button>
 
-      {/* Source → Target */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${src.color}`}>
-          <span>{src.icon}</span>
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${src.bg} ${src.color}`}>
           {src.label}
         </span>
-        <svg className="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        <svg className="w-3 h-3 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${tgt.color}`}>
-          <span>{tgt.icon}</span>
+        <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${tgt.bg} ${tgt.color}`}>
           {tgt.label}
         </span>
       </div>
 
-      {/* Action badge */}
-      <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${act.color}`}>
+      <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${act.bg} ${act.color}`}>
         {act.label}
       </span>
 
-      {/* Days */}
-      <span className="text-xs text-muted tabular-nums flex-shrink-0">
-        {rule.look_ahead_days}日
-      </span>
+      <span className="text-[11px] text-muted tabular-nums">{rule.look_ahead_days}日</span>
 
-      {/* Delete */}
       <button
         onClick={onDelete}
-        className="p-1.5 rounded-md text-muted hover:text-error hover:bg-error/10 transition-colors flex-shrink-0"
+        className="p-1 rounded text-muted-foreground hover:text-error hover:bg-error-light transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>

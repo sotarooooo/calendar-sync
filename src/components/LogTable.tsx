@@ -2,92 +2,70 @@
 
 import type { SyncLogRow } from "@/lib/supabase";
 
+const ACTION_LABELS: Record<string, string> = {
+  deleted: "削除",
+  copied: "コピー",
+  delete_failed: "削除失敗",
+  copy_failed: "コピー失敗",
+};
+
 export default function LogTable({ logs }: { logs: SyncLogRow[] }) {
   if (logs.length === 0) {
     return (
-      <div className="bg-card border border-border border-dashed rounded-xl p-12 text-center animate-fade-in">
-        <div className="w-12 h-12 rounded-full bg-card-hover flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </div>
-        <p className="text-sm text-muted-foreground mb-1">ログがありません</p>
-        <p className="text-xs text-muted">同期を実行するとアクション履歴がここに表示されます</p>
+      <div className="border border-dashed border-border rounded-lg p-10 text-center">
+        <p className="text-[13px] text-muted">ログがありません</p>
+        <p className="text-[11px] text-muted-foreground mt-1">同期を実行すると履歴が表示されます</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden animate-fade-in">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">時刻</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">アクション</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">予定</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">ステータス</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50">
-            {logs.map((log, i) => (
-              <tr
-                key={log.id}
-                className="hover:bg-card-hover/50 transition-colors animate-fade-in"
-                style={{ animationDelay: `${i * 30}ms` }}
-              >
-                <td className="px-4 py-3 text-xs text-muted tabular-nums whitespace-nowrap">
-                  {new Date(log.created_at).toLocaleString("ja-JP", {
-                    month: "numeric",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-border bg-sidebar-bg">
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">時刻</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">アクション</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">予定</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.map((log) => (
+            <tr key={log.id} className="border-b border-border last:border-0 hover:bg-card-hover/50">
+              <td className="px-3 py-2 text-[12px] text-muted tabular-nums whitespace-nowrap">
+                {new Date(log.created_at).toLocaleString("ja-JP", {
+                  month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </td>
+              <td className="px-3 py-2 text-[12px]">
+                {ACTION_LABELS[log.action] ?? log.action}
+              </td>
+              <td className="px-3 py-2">
+                <p className="text-[12px] font-medium truncate max-w-[180px]">{log.event_title}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {new Date(log.event_start).toLocaleString("ja-JP", {
+                    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
                   })}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${
-                    log.action.includes("delete") || log.action.includes("削除")
-                      ? "text-red-400"
-                      : log.action.includes("copy") || log.action.includes("コピー")
-                      ? "text-blue-400"
-                      : "text-muted-foreground"
-                  }`}>
-                    {log.action === "deleted" && "🗑 削除"}
-                    {log.action === "copied" && "📋 コピー"}
-                    {log.action === "delete_failed" && "🗑 削除失敗"}
-                    {log.action === "copy_failed" && "📋 コピー失敗"}
-                    {!["deleted", "copied", "delete_failed", "copy_failed"].includes(log.action) && log.action}
+                </p>
+              </td>
+              <td className="px-3 py-2">
+                {log.status === "success" ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-success-light text-success">
+                    <span className="w-1 h-1 rounded-full bg-success" />
+                    成功
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  <p className="text-sm font-medium truncate max-w-[200px]">{log.event_title}</p>
-                  <p className="text-xs text-muted mt-0.5">
-                    {new Date(log.event_start).toLocaleString("ja-JP", {
-                      month: "numeric",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
-                    log.status === "success"
-                      ? "bg-green-500/10 text-green-400"
-                      : "bg-red-500/10 text-red-400"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      log.status === "success" ? "bg-green-400" : "bg-red-400"
-                    }`} />
-                    {log.status === "success" ? "成功" : "エラー"}
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-error-light text-error">
+                    <span className="w-1 h-1 rounded-full bg-error" />
+                    エラー
                   </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

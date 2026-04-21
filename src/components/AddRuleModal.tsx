@@ -7,11 +7,6 @@ const PROVIDERS = [
   { value: "google_calendar", label: "Google Calendar" },
 ];
 
-const ACTIONS = [
-  { value: "delete_overlap", label: "重複を削除", desc: "同期元に予定がある時間帯の、同期先の自分の予定を削除" },
-  { value: "copy", label: "予定をコピー", desc: "同期元の予定を同期先にそのままコピー" },
-];
-
 export default function AddRuleModal({
   onClose,
   onCreated,
@@ -47,97 +42,67 @@ export default function AddRuleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-xl shadow-xl w-full max-w-md animate-slide-up">
-        <div className="px-5 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold">ルールを追加</h3>
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="relative bg-white border border-neutral-200 rounded-xl shadow-lg w-full max-w-sm animate-slide-up text-[13px]">
+        <div className="px-5 py-3 border-b border-neutral-200">
+          <h3 className="font-semibold text-neutral-900">ルールを追加</h3>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-medium text-muted mb-1.5">同期元</label>
+            <label className="block">
+              <span className="text-[11px] text-neutral-500 mb-1 block">同期元</span>
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                className="w-full border border-input-border rounded-md px-2.5 py-2 text-[13px] bg-card focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                className="w-full border border-neutral-300 rounded-md px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                {PROVIDERS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
+                {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-medium text-muted mb-1.5">同期先</label>
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-neutral-500 mb-1 block">同期先</span>
               <select
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                className="w-full border border-input-border rounded-md px-2.5 py-2 text-[13px] bg-card focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                className="w-full border border-neutral-300 rounded-md px-2 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                {PROVIDERS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
+                {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
-            </div>
+            </label>
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-muted mb-1.5">アクション</label>
+            <span className="text-[11px] text-neutral-500 mb-1.5 block">アクション</span>
             <div className="space-y-1.5">
-              {ACTIONS.map((a) => (
-                <label
-                  key={a.value}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 rounded-md border cursor-pointer transition-colors ${
-                    action === a.value ? "border-accent bg-accent-light" : "border-border hover:bg-card-hover"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="action"
-                    value={a.value}
-                    checked={action === a.value}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="mt-0.5 accent-accent"
-                  />
-                  <div>
-                    <p className="text-[13px] font-medium">{a.label}</p>
-                    <p className="text-[11px] text-muted mt-0.5">{a.desc}</p>
-                  </div>
-                </label>
-              ))}
+              <label className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer ${action === "delete_overlap" ? "border-blue-500 bg-blue-50" : "border-neutral-200"}`}>
+                <input type="radio" name="action" value="delete_overlap" checked={action === "delete_overlap"} onChange={(e) => setAction(e.target.value)} className="accent-blue-600" />
+                <div>
+                  <p className="font-medium">重複を削除</p>
+                  <p className="text-[11px] text-neutral-400">同期元と被る同期先の予定を削除</p>
+                </div>
+              </label>
+              <label className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer ${action === "copy" ? "border-blue-500 bg-blue-50" : "border-neutral-200"}`}>
+                <input type="radio" name="action" value="copy" checked={action === "copy"} onChange={(e) => setAction(e.target.value)} className="accent-blue-600" />
+                <div>
+                  <p className="font-medium">予定をコピー</p>
+                  <p className="text-[11px] text-neutral-400">同期元の予定を同期先にコピー</p>
+                </div>
+              </label>
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-medium text-muted mb-1.5">先読み日数: {days}日</label>
-            <input
-              type="range"
-              min={1}
-              max={90}
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
-              className="w-full accent-accent h-1.5"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>1日</span>
-              <span>90日</span>
-            </div>
-          </div>
+          <label className="block">
+            <span className="text-[11px] text-neutral-500 mb-1 block">先読み日数: {days}日</span>
+            <input type="range" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full accent-blue-600" />
+          </label>
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-8 px-3 text-[12px] font-medium text-muted hover:text-foreground transition-colors"
-            >
+            <button type="button" onClick={onClose} className="h-7 px-3 text-[12px] text-neutral-500 hover:text-neutral-900">
               キャンセル
             </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-8 px-4 bg-accent text-white text-[12px] font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50"
-            >
-              {submitting ? "作成中..." : "作成"}
+            <button type="submit" disabled={submitting} className="h-7 px-4 bg-blue-600 text-white text-[12px] font-medium rounded-md hover:bg-blue-700 disabled:opacity-50">
+              {submitting ? "..." : "作成"}
             </button>
           </div>
         </form>

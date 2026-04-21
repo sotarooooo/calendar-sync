@@ -66,65 +66,54 @@ export default function Dashboard() {
   const errorCount = logs.filter((l) => l.status === "error").length;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-neutral-50">
       {/* Header */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-6 bg-card">
-        <h1 className="text-[13px] font-medium text-muted">ダッシュボード</h1>
+      <header className="h-12 border-b border-neutral-200 flex items-center justify-between px-6 bg-white">
+        <span className="text-[13px] text-neutral-500">ダッシュボード</span>
         <button
           onClick={handleSync}
           disabled={syncing || rules.length === 0}
-          className="inline-flex items-center gap-1.5 h-8 px-3 bg-accent text-white text-[12px] font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-40"
+          className="h-7 px-3 bg-blue-600 text-white text-[12px] font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-40"
         >
-          {syncing ? (
-            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          )}
           {syncing ? "同期中..." : "同期を実行"}
         </button>
       </header>
 
-      <div className="p-6 space-y-6 max-w-5xl">
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-3 animate-fade-in">
-          <StatCard label="ルール" value={String(rules.length)} sub={`${activeRules} 有効`} color="accent" />
-          <StatCard label="成功" value={String(successCount)} sub="アクション" color="success" />
-          <StatCard label="エラー" value={String(errorCount)} sub="アクション" color={errorCount > 0 ? "error" : "muted"} />
-          <StatCard
-            label="最終同期"
-            value={lastSync ? new Date(lastSync).toLocaleString("ja-JP", { hour: "2-digit", minute: "2-digit" }) : "—"}
-            sub={lastSync ? new Date(lastSync).toLocaleDateString("ja-JP", { month: "short", day: "numeric" }) : "未実行"}
-            color="muted"
-          />
+      <div className="p-6 space-y-6 max-w-4xl">
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-3">
+          <StatCard label="ルール数" value={rules.length} accent={activeRules > 0} />
+          <StatCard label="有効" value={activeRules} accent={activeRules > 0} />
+          <StatCard label="成功" value={successCount} />
+          <StatCard label="エラー" value={errorCount} error={errorCount > 0} />
         </div>
 
-        {/* Rules */}
+        {/* Last sync */}
+        {lastSync && (
+          <p className="text-[11px] text-neutral-400">
+            最終同期: {new Date(lastSync).toLocaleString("ja-JP")}
+          </p>
+        )}
+
+        {/* Rules section */}
         <section id="rules">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[13px] font-semibold">同期ルール</h2>
+            <h2 className="text-[13px] font-semibold text-neutral-900">同期ルール</h2>
             <button
               onClick={() => setShowAdd(true)}
-              className="inline-flex items-center gap-1 h-7 px-2.5 border border-border text-[12px] font-medium rounded-md hover:bg-card-hover transition-colors"
+              className="h-7 px-2.5 border border-neutral-300 text-[12px] font-medium rounded-md hover:bg-neutral-100 transition-colors"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              追加
+              + 追加
             </button>
           </div>
 
           {rules.length === 0 ? (
-            <div className="border border-dashed border-border rounded-lg p-10 text-center">
-              <p className="text-[13px] text-muted">ルールがありません</p>
-              <p className="text-[11px] text-muted-foreground mt-1">「追加」から同期ルールを作成してください</p>
+            <div className="bg-white border border-dashed border-neutral-300 rounded-lg p-8 text-center">
+              <p className="text-[13px] text-neutral-500">ルールがありません</p>
+              <p className="text-[11px] text-neutral-400 mt-1">「+ 追加」からルールを作成</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {rules.map((rule) => (
                 <RuleCard
                   key={rule.id}
@@ -137,9 +126,9 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Logs */}
+        {/* Logs section */}
         <section id="logs">
-          <h2 className="text-[13px] font-semibold mb-3">ログ</h2>
+          <h2 className="text-[13px] font-semibold text-neutral-900 mb-3">ログ</h2>
           <LogTable logs={logs} />
         </section>
       </div>
@@ -154,22 +143,15 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
-  const dotColor = {
-    accent: "bg-accent",
-    success: "bg-success",
-    error: "bg-error",
-    muted: "bg-muted-foreground",
-  }[color] ?? "bg-muted-foreground";
+function StatCard({ label, value, accent, error }: { label: string; value: number; accent?: boolean; error?: boolean }) {
+  let valueColor = "text-neutral-900";
+  if (accent) valueColor = "text-blue-600";
+  if (error) valueColor = "text-red-600";
 
   return (
-    <div className="bg-card border border-border rounded-lg px-4 py-3">
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-        <p className="text-[11px] text-muted font-medium uppercase tracking-wide">{label}</p>
-      </div>
-      <p className="text-xl font-semibold tracking-tight">{value}</p>
-      <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
+    <div className="bg-white border border-neutral-200 rounded-lg px-4 py-3">
+      <p className="text-[11px] text-neutral-400 mb-1">{label}</p>
+      <p className={`text-2xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
     </div>
   );
 }

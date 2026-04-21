@@ -2,14 +2,14 @@
 
 import type { SyncRuleRow } from "@/lib/supabase";
 
-const PROVIDERS: Record<string, { label: string; color: string; bg: string }> = {
-  timetree: { label: "TimeTree", color: "text-green-700", bg: "bg-green-50 border-green-200" },
-  google_calendar: { label: "Google Calendar", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+const PROVIDERS: Record<string, string> = {
+  timetree: "TimeTree",
+  google_calendar: "Google Calendar",
 };
 
-const ACTIONS: Record<string, { label: string; color: string; bg: string }> = {
-  delete_overlap: { label: "重複削除", color: "text-red-700", bg: "bg-red-50 border-red-200" },
-  copy: { label: "コピー", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+const ACTIONS: Record<string, { label: string; style: string }> = {
+  delete_overlap: { label: "重複削除", style: "text-red-600 bg-red-50" },
+  copy: { label: "コピー", style: "text-blue-600 bg-blue-50" },
 };
 
 export default function RuleCard({
@@ -21,50 +21,29 @@ export default function RuleCard({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const src = PROVIDERS[rule.source_provider] ?? { label: rule.source_provider, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
-  const tgt = PROVIDERS[rule.target_provider] ?? { label: rule.target_provider, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
-  const act = ACTIONS[rule.action] ?? { label: rule.action, color: "text-gray-700", bg: "bg-gray-50 border-gray-200" };
+  const act = ACTIONS[rule.action] ?? { label: rule.action, style: "text-neutral-600 bg-neutral-50" };
 
   return (
-    <div className={`bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-3 transition-opacity ${!rule.enabled ? "opacity-40" : ""}`}>
+    <div className={`bg-white border border-neutral-200 rounded-lg px-4 py-2.5 flex items-center gap-3 text-[13px] ${!rule.enabled ? "opacity-40" : ""}`}>
       <button
         onClick={onToggle}
-        className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
-          rule.enabled ? "bg-accent" : "bg-border"
-        }`}
+        className={`w-7 h-4 rounded-full flex-shrink-0 relative transition-colors ${rule.enabled ? "bg-blue-600" : "bg-neutral-300"}`}
       >
-        <span
-          className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${
-            rule.enabled ? "left-[18px]" : "left-[2px]"
-          }`}
-        />
+        <span className={`absolute top-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-all ${rule.enabled ? "left-[14px]" : "left-[2px]"}`} />
       </button>
 
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-        <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${src.bg} ${src.color}`}>
-          {src.label}
-        </span>
-        <svg className="w-3 h-3 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-        <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${tgt.bg} ${tgt.color}`}>
-          {tgt.label}
-        </span>
-      </div>
+      <span className="text-neutral-900 font-medium">{PROVIDERS[rule.source_provider] ?? rule.source_provider}</span>
+      <span className="text-neutral-300">→</span>
+      <span className="text-neutral-900 font-medium">{PROVIDERS[rule.target_provider] ?? rule.target_provider}</span>
 
-      <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${act.bg} ${act.color}`}>
+      <span className={`ml-auto px-1.5 py-0.5 rounded text-[11px] font-medium ${act.style}`}>
         {act.label}
       </span>
 
-      <span className="text-[11px] text-muted tabular-nums">{rule.look_ahead_days}日</span>
+      <span className="text-[11px] text-neutral-400 tabular-nums">{rule.look_ahead_days}日</span>
 
-      <button
-        onClick={onDelete}
-        className="p-1 rounded text-muted-foreground hover:text-error hover:bg-error-light transition-colors"
-      >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+      <button onClick={onDelete} className="text-neutral-300 hover:text-red-500 transition-colors text-[11px]">
+        ✕
       </button>
     </div>
   );

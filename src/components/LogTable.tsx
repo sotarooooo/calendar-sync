@@ -12,54 +12,43 @@ const ACTION_LABELS: Record<string, string> = {
 export default function LogTable({ logs }: { logs: SyncLogRow[] }) {
   if (logs.length === 0) {
     return (
-      <div className="border border-dashed border-border rounded-lg p-10 text-center">
-        <p className="text-[13px] text-muted">ログがありません</p>
-        <p className="text-[11px] text-muted-foreground mt-1">同期を実行すると履歴が表示されます</p>
+      <div className="bg-white border border-dashed border-neutral-300 rounded-lg p-8 text-center">
+        <p className="text-[13px] text-neutral-500">ログがありません</p>
+        <p className="text-[11px] text-neutral-400 mt-1">同期を実行すると履歴が表示されます</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden text-[13px]">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-border bg-sidebar-bg">
-            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">時刻</th>
-            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">アクション</th>
-            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">予定</th>
-            <th className="px-3 py-2 text-left text-[11px] font-medium text-muted">結果</th>
+          <tr className="border-b border-neutral-200 bg-neutral-50">
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-neutral-400">時刻</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-neutral-400">操作</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-neutral-400">予定名</th>
+            <th className="px-3 py-2 text-left text-[11px] font-medium text-neutral-400">結果</th>
           </tr>
         </thead>
         <tbody>
           {logs.map((log) => (
-            <tr key={log.id} className="border-b border-border last:border-0 hover:bg-card-hover/50">
-              <td className="px-3 py-2 text-[12px] text-muted tabular-nums whitespace-nowrap">
+            <tr key={log.id} className="border-b border-neutral-100 last:border-0">
+              <td className="px-3 py-2 text-[12px] text-neutral-400 tabular-nums whitespace-nowrap">
                 {new Date(log.created_at).toLocaleString("ja-JP", {
                   month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
                 })}
               </td>
-              <td className="px-3 py-2 text-[12px]">
+              <td className="px-3 py-2 text-[12px] text-neutral-600">
                 {ACTION_LABELS[log.action] ?? log.action}
               </td>
               <td className="px-3 py-2">
-                <p className="text-[12px] font-medium truncate max-w-[180px]">{log.event_title}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {new Date(log.event_start).toLocaleString("ja-JP", {
-                    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
-                  })}
-                </p>
+                <p className="text-[12px] text-neutral-900 truncate max-w-[200px]">{log.event_title}</p>
               </td>
               <td className="px-3 py-2">
                 {log.status === "success" ? (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-success-light text-success">
-                    <span className="w-1 h-1 rounded-full bg-success" />
-                    成功
-                  </span>
+                  <span className="text-[11px] text-green-600">成功</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-error-light text-error">
-                    <span className="w-1 h-1 rounded-full bg-error" />
-                    エラー
-                  </span>
+                  <span className="text-[11px] text-red-600">エラー</span>
                 )}
               </td>
             </tr>

@@ -26,20 +26,28 @@ async function main() {
 
   const engine = new SyncEngine([
     {
+      config: {
+        id: "cli-default",
+        sourceName: "timetree",
+        targetName: "google_calendar",
+        action: "delete_overlap",
+        lookAheadDays: 14,
+        enabled: true,
+      },
       source: timetree,
       target: gcal,
-      lookAheadDays: 14,
     },
   ]);
 
   console.log(`[${new Date().toLocaleString("ja-JP")}] Starting sync...`);
-  const result = await engine.run();
+  const logs = await engine.run();
 
-  console.log(
-    `[done] Deleted: ${result.deleted.length}, Errors: ${result.errors.length}`,
-  );
+  console.log(`[done] Actions: ${logs.length}`);
+  for (const log of logs) {
+    console.log(`  [${log.status}] ${log.action}: "${log.eventTitle}" - ${log.message}`);
+  }
 
-  if (result.errors.length > 0) {
+  if (logs.some((l) => l.status === "error")) {
     process.exit(1);
   }
 }

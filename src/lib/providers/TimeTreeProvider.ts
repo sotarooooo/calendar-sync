@@ -1,4 +1,4 @@
-import type { CalendarProvider, CalendarEvent } from "./CalendarProvider.js";
+import type { CalendarProvider, CalendarEvent } from "@/lib/providers/CalendarProvider";
 import { randomUUID } from "crypto";
 
 const API_BASE = "https://timetreeapp.com/api/v1";

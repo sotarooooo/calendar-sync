@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { runSync } from "./engine/run-sync-core.js";
 
 async function main() {

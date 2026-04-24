@@ -24,7 +24,7 @@ export default function RootLayout({
           <div className="absolute top-[30%] -right-[5%] w-[45%] h-[45%] rounded-full bg-indigo-500/10 blur-[140px]" />
           <div className="absolute -bottom-[20%] left-[20%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px]" />
           
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+          <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay"></div>
         </div>
 
         <div className="flex min-h-screen relative z-10 w-full max-w-[1800px] mx-auto">

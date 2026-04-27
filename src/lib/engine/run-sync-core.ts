@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { TimeTreeProvider } from "../providers/TimeTreeProvider.js";
-import { GoogleCalendarProvider } from "../providers/GoogleCalendarProvider.js";
-import { SyncEngine, type RuntimeRule, type SyncLogEntry } from "./SyncEngine.js";
+import { TimeTreeProvider } from "../providers/TimeTreeProvider";
+import { GoogleCalendarProvider } from "../providers/GoogleCalendarProvider";
+import { SyncEngine, type RuntimeRule, type SyncLogEntry } from "./SyncEngine";
 
 function env(key: string): string {
   const val = process.env[key];

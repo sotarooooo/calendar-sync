@@ -4,10 +4,8 @@ import { GoogleCalendarProvider } from "@/lib/providers/GoogleCalendarProvider";
 export async function GET() {
   try {
     const gcal = new GoogleCalendarProvider({
-      clientId: process.env["GOOGLE_CLIENT_ID"]!,
-      clientSecret: process.env["GOOGLE_CLIENT_SECRET"]!,
-      refreshToken: process.env["GOOGLE_REFRESH_TOKEN"]!,
-      calendarId: process.env["GOOGLE_CALENDAR_ID"] ?? "primary",
+      serviceAccountKey: process.env["GOOGLE_SERVICE_ACCOUNT_KEY"]!,
+      calendarId: process.env["GOOGLE_CALENDAR_ID"],
       ownerEmail: process.env["GOOGLE_OWNER_EMAIL"]!,
     });
 

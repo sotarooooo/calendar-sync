@@ -22,10 +22,8 @@ function buildProvider(name: string) {
   }
   if (providerType === "google_calendar") {
     return new GoogleCalendarProvider({
-      clientId: env("GOOGLE_CLIENT_ID"),
-      clientSecret: env("GOOGLE_CLIENT_SECRET"),
-      refreshToken: env("GOOGLE_REFRESH_TOKEN"),
-      calendarId: configId || process.env["GOOGLE_CALENDAR_ID"] || "primary",
+      serviceAccountKey: env("GOOGLE_SERVICE_ACCOUNT_KEY"),
+      calendarId: configId || process.env["GOOGLE_CALENDAR_ID"],
       ownerEmail: env("GOOGLE_OWNER_EMAIL"),
     });
   }

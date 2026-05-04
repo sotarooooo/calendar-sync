@@ -43,10 +43,8 @@ export async function GET(request: Request) {
     );
 
     const gcal = new GoogleCalendarProvider({
-      clientId: env("GOOGLE_CLIENT_ID"),
-      clientSecret: env("GOOGLE_CLIENT_SECRET"),
-      refreshToken: env("GOOGLE_REFRESH_TOKEN"),
-      calendarId: process.env["GOOGLE_CALENDAR_ID"] ?? "primary",
+      serviceAccountKey: env("GOOGLE_SERVICE_ACCOUNT_KEY"),
+      calendarId: process.env["GOOGLE_CALENDAR_ID"],
       ownerEmail: env("GOOGLE_OWNER_EMAIL"),
     });
 

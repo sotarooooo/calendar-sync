@@ -8,20 +8,19 @@ export class GoogleCalendarProvider implements CalendarProvider {
   private readonly ownerEmail: string;
 
   constructor(credentials: {
-    clientId: string;
-    clientSecret: string;
-    refreshToken: string;
+    serviceAccountKey: string;
     calendarId?: string;
     ownerEmail: string;
   }) {
-    const auth = new google.auth.OAuth2(
-      credentials.clientId,
-      credentials.clientSecret,
-    );
-    auth.setCredentials({ refresh_token: credentials.refreshToken });
+    const key = JSON.parse(credentials.serviceAccountKey);
+    const auth = new google.auth.JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: ["https://www.googleapis.com/auth/calendar"],
+    });
 
     this.calendar = google.calendar({ version: "v3", auth });
-    this.calendarId = credentials.calendarId ?? "primary";
+    this.calendarId = credentials.calendarId ?? credentials.ownerEmail;
     this.ownerEmail = credentials.ownerEmail;
   }
 

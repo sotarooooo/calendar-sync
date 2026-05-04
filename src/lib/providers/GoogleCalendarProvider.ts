@@ -24,11 +24,23 @@ export class GoogleCalendarProvider implements CalendarProvider {
     this.ownerEmail = credentials.ownerEmail;
   }
 
+  private async ensureCalendarRegistered(): Promise<void> {
+    try {
+      await this.calendar.calendarList.get({ calendarId: this.calendarId });
+    } catch {
+      await this.calendar.calendarList.insert({
+        requestBody: { id: this.calendarId },
+      });
+    }
+  }
+
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    await this.ensureCalendarRegistered();
     return this._fetchEventsFromCalendar(this.calendarId, from, to);
   }
 
   async getAllEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+    await this.ensureCalendarRegistered();
     return this._fetchEventsFromCalendar(this.calendarId, from, to);
   }
 

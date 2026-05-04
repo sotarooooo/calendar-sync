@@ -29,34 +29,16 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   async getAllEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
-    const res = await this.calendar.calendarList.list();
-    const calendars = res.data.items ?? [];
-    
-    const allEvents: CalendarEvent[] = [];
-    await Promise.all(
-      calendars.map(async (cal) => {
-        if (!cal.id) return;
-        try {
-          const events = await this._fetchEventsFromCalendar(cal.id, from, to);
-          // 所属するカレンダーの名前を持たせる
-          events.forEach(e => e.calendarName = cal.summary ?? "Unknown");
-          allEvents.push(...events);
-        } catch (e) {
-          // 権限がないカレンダーなどは無視
-          console.error(`Failed to fetch from Google Calendar: ${cal.id}`);
-        }
-      })
-    );
-    return allEvents;
+    return this._fetchEventsFromCalendar(this.calendarId, from, to);
   }
 
   async getAllCalendars() {
-    const res = await this.calendar.calendarList.list();
-    return (res.data.items ?? []).map(cal => ({
-      id: cal.id,
-      name: cal.summary,
-      color: cal.backgroundColor
-    }));
+    const res = await this.calendar.calendars.get({ calendarId: this.calendarId });
+    return [{
+      id: res.data.id,
+      name: res.data.summary,
+      color: undefined,
+    }];
   }
 
   private async _fetchEventsFromCalendar(calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]> {

@@ -20,7 +20,8 @@ export class GoogleCalendarProvider implements CalendarProvider {
     });
 
     this.calendar = google.calendar({ version: "v3", auth });
-    this.calendarId = credentials.calendarId ?? credentials.ownerEmail;
+    const cid = credentials.calendarId;
+    this.calendarId = (!cid || cid === "primary") ? credentials.ownerEmail : cid;
     this.ownerEmail = credentials.ownerEmail;
   }
 

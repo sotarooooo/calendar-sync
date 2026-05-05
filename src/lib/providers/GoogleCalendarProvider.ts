@@ -60,6 +60,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
         maxResults: 250,
         pageToken,
       });
+      console.log(`[GCal] calendarId=${calendarId}, items=${res.data.items?.length ?? 0}`);
 
       for (const item of res.data.items ?? []) {
         if (!item.id || !item.start) continue;

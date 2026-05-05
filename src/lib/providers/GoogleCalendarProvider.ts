@@ -25,6 +25,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
     this.ownerEmail = credentials.ownerEmail;
   }
 
+  getCalendarId(): string {
+    return this.calendarId;
+  }
+
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
     return this._fetchEventsFromCalendar(this.calendarId, from, to);
   }

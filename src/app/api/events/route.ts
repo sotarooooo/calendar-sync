@@ -48,8 +48,6 @@ export async function GET(request: Request) {
       ownerEmail: env("GOOGLE_OWNER_EMAIL"),
     });
 
-    console.log("[Events API] Google Calendar ID:", process.env["GOOGLE_CALENDAR_ID"], "→ resolved:", gcal.getCalendarId());
-
     // 並行取得
     const [ttEvents, gcEvents] = await Promise.all([
       timetree.getAllEvents(start, end).catch((err) => {

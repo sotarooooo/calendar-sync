@@ -1,16 +1,24 @@
 import { NextResponse } from "next/server";
-import { GoogleCalendarProvider } from "@/lib/providers/GoogleCalendarProvider";
+import { google } from "googleapis";
 
 export async function GET() {
   try {
-    const gcal = new GoogleCalendarProvider({
-      serviceAccountKey: process.env["GOOGLE_SERVICE_ACCOUNT_KEY"]!,
-      calendarId: process.env["GOOGLE_CALENDAR_ID"],
-      ownerEmail: process.env["GOOGLE_OWNER_EMAIL"]!,
+    const keyJson = process.env["GOOGLE_SERVICE_ACCOUNT_KEY"]!;
+    const key = JSON.parse(keyJson);
+    const auth = new google.auth.JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
     });
 
-    const list = await gcal.getAllCalendars();
-    return NextResponse.json(list);
+    const calendar = google.calendar({ version: "v3", auth });
+    const calendarId = process.env["GOOGLE_CALENDAR_ID"] || process.env["GOOGLE_OWNER_EMAIL"]!;
+    const res = await calendar.calendars.get({ calendarId });
+
+    return NextResponse.json([{
+      id: res.data.id,
+      name: res.data.summary,
+    }]);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Google Calendars Error]", msg);

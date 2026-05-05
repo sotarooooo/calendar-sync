@@ -27,68 +27,12 @@ export class GoogleCalendarProvider implements CalendarProvider {
     this.allowedEmails = new Set([credentials.ownerEmail, key.client_email]);
   }
 
-  getCalendarId(): string {
-    return this.calendarId;
-  }
-
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
-    return this._fetchEventsFromCalendar(this.calendarId, from, to);
+    return this.fetchEvents(this.calendarId, from, to);
   }
 
   async getAllEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
-    return this._fetchEventsFromCalendar(this.calendarId, from, to);
-  }
-
-  async getAllCalendars() {
-    const res = await this.calendar.calendars.get({ calendarId: this.calendarId });
-    return [{
-      id: res.data.id,
-      name: res.data.summary,
-      color: undefined,
-    }];
-  }
-
-  private async _fetchEventsFromCalendar(calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]> {
-    const events: CalendarEvent[] = [];
-    let pageToken: string | undefined;
-
-    do {
-      const res = await this.calendar.events.list({
-        calendarId,
-        timeMin: from.toISOString(),
-        timeMax: to.toISOString(),
-        singleEvents: true,
-        orderBy: "startTime",
-        maxResults: 250,
-        pageToken,
-      });
-      console.log(`[GCal] calendarId=${calendarId}, items=${res.data.items?.length ?? 0}`);
-
-      for (const item of res.data.items ?? []) {
-        if (!item.id || !item.start) continue;
-        if (item.creator?.email && !this.allowedEmails.has(item.creator.email)) continue;
-
-        const isAllDay = !!item.start.date;
-        const start = new Date(item.start.dateTime ?? item.start.date!);
-        const end = new Date(
-          item.end?.dateTime ?? item.end?.date ?? item.start.dateTime ?? item.start.date!,
-        );
-
-        events.push({
-          id: item.id,
-          title: item.summary ?? "(無題)",
-          start,
-          end,
-          creatorEmail: item.creator?.email,
-          isAllDay,
-          raw: item,
-        });
-      }
-
-      pageToken = res.data.nextPageToken ?? undefined;
-    } while (pageToken);
-
-    return events;
+    return this.fetchEvents(this.calendarId, from, to);
   }
 
   async deleteEvent(eventId: string): Promise<void> {
@@ -127,7 +71,6 @@ export class GoogleCalendarProvider implements CalendarProvider {
     const body: calendar_v3.Schema$Event = {
       summary: event.title,
     };
-
     if (event.isAllDay) {
       body.start = { date: event.start.toISOString().split("T")[0] };
       body.end = { date: event.end.toISOString().split("T")[0] };
@@ -135,7 +78,6 @@ export class GoogleCalendarProvider implements CalendarProvider {
       body.start = { dateTime: event.start.toISOString(), timeZone: "Asia/Tokyo" };
       body.end = { dateTime: event.end.toISOString(), timeZone: "Asia/Tokyo" };
     }
-
     await this.calendar.events.insert({
       calendarId: this.calendarId,
       requestBody: body,
@@ -144,5 +86,47 @@ export class GoogleCalendarProvider implements CalendarProvider {
 
   isOwnEvent(event: CalendarEvent): boolean {
     return !!event.creatorEmail && this.allowedEmails.has(event.creatorEmail);
+  }
+
+  private async fetchEvents(calendarId: string, from: Date, to: Date): Promise<CalendarEvent[]> {
+    const events: CalendarEvent[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const res = await this.calendar.events.list({
+        calendarId,
+        timeMin: from.toISOString(),
+        timeMax: to.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 250,
+        pageToken,
+      });
+
+      for (const item of res.data.items ?? []) {
+        if (!item.id || !item.start) continue;
+        if (item.creator?.email && !this.allowedEmails.has(item.creator.email)) continue;
+
+        const isAllDay = !!item.start.date;
+        const start = new Date(item.start.dateTime ?? item.start.date!);
+        const end = new Date(
+          item.end?.dateTime ?? item.end?.date ?? item.start.dateTime ?? item.start.date!,
+        );
+
+        events.push({
+          id: item.id,
+          title: item.summary ?? "(無題)",
+          start,
+          end,
+          creatorEmail: item.creator?.email,
+          isAllDay,
+          raw: item,
+        });
+      }
+
+      pageToken = res.data.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    return events;
   }
 }

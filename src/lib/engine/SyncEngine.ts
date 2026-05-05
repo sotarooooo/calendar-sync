@@ -29,11 +29,11 @@ export interface SyncLogEntry {
   timestamp: string;
 }
 
-function timeOverlaps(a: CalendarEvent, b: CalendarEvent): boolean {
+export function timeOverlaps(a: CalendarEvent, b: CalendarEvent): boolean {
   return a.start < b.end && a.end > b.start;
 }
 
-function subtractOverlaps(
+export function subtractOverlaps(
   target: CalendarEvent,
   overlaps: CalendarEvent[],
 ): { start: Date; end: Date }[] {

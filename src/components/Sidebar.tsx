@@ -3,7 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, GitMerge, ListFilter, Activity, ChevronsUpDown, CalendarSync, Sparkles, CalendarDays } from "lucide-react";
+import { LayoutDashboard, GitMerge, ListFilter, Activity, ChevronsUpDown, CalendarSync, Sparkles, CalendarDays, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const NAV = [
   { href: "/", label: "ダッシュボード", icon: LayoutDashboard },
@@ -14,6 +16,14 @@ const NAV = [
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[280px] bg-slate-900 border-r border-slate-800 flex flex-col z-20 shadow-2xl text-slate-300">
@@ -71,8 +81,8 @@ export const Sidebar: React.FC = () => {
         </div>
       </nav>
 
-      {/* Status */}
-      <div className="p-6 mt-auto">
+      {/* Status & Logout */}
+      <div className="p-6 mt-auto space-y-3">
         <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative flex items-center gap-3">
@@ -86,6 +96,13 @@ export const Sidebar: React.FC = () => {
             </div>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] font-bold text-slate-500 hover:text-red-400 hover:bg-white/5 transition-colors"
+        >
+          <LogOut size={16} />
+          ログアウト
+        </button>
       </div>
     </aside>
   );

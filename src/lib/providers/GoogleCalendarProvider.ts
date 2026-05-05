@@ -6,6 +6,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
   private calendar: calendar_v3.Calendar;
   private readonly calendarId: string;
   private readonly ownerEmail: string;
+  private readonly allowedEmails: Set<string>;
 
   constructor(credentials: {
     serviceAccountKey: string;
@@ -23,6 +24,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
     const cid = credentials.calendarId;
     this.calendarId = (!cid || cid === "primary") ? credentials.ownerEmail : cid;
     this.ownerEmail = credentials.ownerEmail;
+    this.allowedEmails = new Set([credentials.ownerEmail, key.client_email]);
   }
 
   getCalendarId(): string {
@@ -64,7 +66,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
 
       for (const item of res.data.items ?? []) {
         if (!item.id || !item.start) continue;
-
+        if (item.creator?.email && !this.allowedEmails.has(item.creator.email)) continue;
 
         const isAllDay = !!item.start.date;
         const start = new Date(item.start.dateTime ?? item.start.date!);
@@ -141,6 +143,6 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   isOwnEvent(event: CalendarEvent): boolean {
-    return event.creatorEmail === this.ownerEmail;
+    return !!event.creatorEmail && this.allowedEmails.has(event.creatorEmail);
   }
 }

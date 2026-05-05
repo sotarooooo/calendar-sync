@@ -60,8 +60,6 @@ export class GoogleCalendarProvider implements CalendarProvider {
       for (const item of res.data.items ?? []) {
         if (!item.id || !item.start) continue;
 
-        // ご自身（GOOGLE_OWNER_EMAIL）以外の予定を抽出対象から完全に除外する
-        if (item.creator?.email && item.creator.email !== this.ownerEmail) continue;
 
         const isAllDay = !!item.start.date;
         const start = new Date(item.start.dateTime ?? item.start.date!);

@@ -1,5 +1,7 @@
 import type { CalendarProvider, CalendarEvent } from "@/lib/providers/CalendarProvider";
 import { randomUUID } from "crypto";
+import rruleLib from "rrule";
+const { RRule } = rruleLib;
 
 const API_BASE = "https://timetreeapp.com/api/v1";
 const USER_AGENT = "web/2.1.0/en";
@@ -13,6 +15,7 @@ interface TimeTreeRawEvent {
   type: number;
   category: number;
   author_id: number;
+  recurrences?: string[];
 }
 
 interface TimeTreeCalendarMeta {
@@ -156,9 +159,26 @@ export class TimeTreeProvider implements CalendarProvider {
     return data.calendars;
   }
 
-  private async fetchMonthlyEvents(calendarId: number, from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
+  private async fetchSyncEvents(calendarId: number): Promise<TimeTreeRawEvent[]> {
+    const data = await this.apiGet<{ events: TimeTreeRawEvent[]; chunk: boolean; since: number }>(
+      `/calendar/${calendarId}/events/sync`,
+    );
+    const events = [...data.events];
+    let { chunk, since } = data;
+    while (chunk) {
+      const next = await this.apiGet<{ events: TimeTreeRawEvent[]; chunk: boolean; since: number }>(
+        `/calendar/${calendarId}/events/sync?since=${since}`,
+      );
+      events.push(...next.events);
+      chunk = next.chunk;
+      since = next.since;
+    }
+    return events;
+  }
+
+  private async fetchRecurringEvents(calendarId: number, from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
     const seen = new Set<string>();
-    const events: TimeTreeRawEvent[] = [];
+    const recurring: TimeTreeRawEvent[] = [];
 
     const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
     const endMonth = new Date(to.getFullYear(), to.getMonth(), 1);
@@ -167,18 +187,66 @@ export class TimeTreeProvider implements CalendarProvider {
       const data = await this.apiGet<{ events: TimeTreeRawEvent[] }>(
         `/calendar/${calendarId}/events?year=${cursor.getFullYear()}&month=${cursor.getMonth() + 1}`,
       );
-      console.log(`[TimeTree] monthly calId=${calendarId} ${cursor.getFullYear()}-${cursor.getMonth() + 1}: ${data.events.length} raw events`);
       for (const ev of data.events) {
-        if (!seen.has(ev.uuid)) {
+        if (ev.recurrences && ev.recurrences.length > 0 && !seen.has(ev.uuid)) {
           seen.add(ev.uuid);
-          events.push(ev);
+          recurring.push(ev);
         }
       }
       cursor.setMonth(cursor.getMonth() + 1);
     }
 
-    console.log(`[TimeTree] fetchMonthlyEvents total: ${events.length} unique events`);
-    return events;
+    return this.expandRecurringEvents(recurring, from, to);
+  }
+
+  private async fetchAllEvents(calendarId: number, from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
+    const [syncEvents, recurringEvents] = await Promise.all([
+      this.fetchSyncEvents(calendarId),
+      this.fetchRecurringEvents(calendarId, from, to),
+    ]);
+
+    const seen = new Set(syncEvents.map((ev) => ev.uuid));
+    const combined = [...syncEvents];
+    for (const ev of recurringEvents) {
+      if (!seen.has(ev.uuid)) {
+        combined.push(ev);
+      }
+    }
+    return combined;
+  }
+
+  private expandRecurringEvents(events: TimeTreeRawEvent[], from: Date, to: Date): TimeTreeRawEvent[] {
+    const result: TimeTreeRawEvent[] = [];
+
+    for (const ev of events) {
+      if (!ev.recurrences || ev.recurrences.length === 0) {
+        result.push(ev);
+        continue;
+      }
+
+      const duration = ev.end_at - ev.start_at;
+      const dtstart = new Date(ev.start_at);
+
+      for (const rruleStr of ev.recurrences) {
+        try {
+          const rule = RRule.fromString(`${rruleStr}\nDTSTART:${dtstart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`);
+          const occurrences = rule.between(from, to, true);
+          for (const occ of occurrences) {
+            result.push({
+              ...ev,
+              uuid: `${ev.uuid}_${occ.getTime()}`,
+              start_at: occ.getTime(),
+              end_at: occ.getTime() + duration,
+              recurrences: [],
+            });
+          }
+        } catch {
+          result.push(ev);
+        }
+      }
+    }
+
+    return result;
   }
 
   async getEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
@@ -190,7 +258,7 @@ export class TimeTreeProvider implements CalendarProvider {
     }
     const currentCal = calendars.find(c => c.id === this.calendarId) || calendars[0];
 
-    const rawEvents = await this.fetchMonthlyEvents(this.calendarId, from, to);
+    const rawEvents = await this.fetchAllEvents(this.calendarId, from, to);
     const fromMs = from.getTime();
     const toMs = to.getTime();
 
@@ -220,7 +288,7 @@ export class TimeTreeProvider implements CalendarProvider {
     await Promise.all(
       calendars.map(async (cal) => {
         try {
-          const rawEvents = await this.fetchMonthlyEvents(cal.id, from, to);
+          const rawEvents = await this.fetchAllEvents(cal.id, from, to);
           const mapped = rawEvents
             .filter((ev) => {
               if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;

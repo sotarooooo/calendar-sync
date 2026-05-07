@@ -1,6 +1,5 @@
 import type { CalendarProvider, CalendarEvent } from "@/lib/providers/CalendarProvider";
 import { randomUUID } from "crypto";
-import { RRule } from "rrule";
 
 const API_BASE = "https://timetreeapp.com/api/v1";
 const USER_AGENT = "web/2.1.0/en";
@@ -214,7 +213,8 @@ export class TimeTreeProvider implements CalendarProvider {
     return combined;
   }
 
-  private expandRecurringEvents(events: TimeTreeRawEvent[], from: Date, to: Date): TimeTreeRawEvent[] {
+  private async expandRecurringEvents(events: TimeTreeRawEvent[], from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
+    const { RRule } = await import("rrule");
     const result: TimeTreeRawEvent[] = [];
 
     for (const ev of events) {

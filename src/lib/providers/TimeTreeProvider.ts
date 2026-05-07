@@ -193,7 +193,6 @@ export class TimeTreeProvider implements CalendarProvider {
 
     return rawEvents
       .filter((ev) => {
-        if (ev.category === 2) return false;
         if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;
         return ev.start_at < toMs && ev.end_at > fromMs;
       })
@@ -221,7 +220,6 @@ export class TimeTreeProvider implements CalendarProvider {
           const rawEvents = await this.fetchAllEvents(cal.id);
           const mapped = rawEvents
             .filter((ev) => {
-              if (ev.category === 2) return false;
               if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;
               return ev.start_at < toMs && ev.end_at > fromMs;
             })

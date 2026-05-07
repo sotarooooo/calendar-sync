@@ -21,11 +21,6 @@ interface TimeTreeCalendarMeta {
   color: number;
 }
 
-interface EventSyncResponse {
-  events: TimeTreeRawEvent[];
-  chunk: boolean;
-  since: number;
-}
 
 const isServerless = !!process.env["VERCEL"];
 
@@ -161,18 +156,24 @@ export class TimeTreeProvider implements CalendarProvider {
     return data.calendars;
   }
 
-  private async fetchAllEvents(calendarId: number): Promise<TimeTreeRawEvent[]> {
-    const data = await this.apiGet<EventSyncResponse>(`/calendar/${calendarId}/events/sync`);
-    const events = [...data.events];
+  private async fetchMonthlyEvents(calendarId: number, from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
+    const seen = new Set<string>();
+    const events: TimeTreeRawEvent[] = [];
 
-    let { chunk, since } = data;
-    while (chunk) {
-      const next = await this.apiGet<EventSyncResponse>(
-        `/calendar/${calendarId}/events/sync?since=${since}`,
+    const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+    const endMonth = new Date(to.getFullYear(), to.getMonth(), 1);
+
+    while (cursor <= endMonth) {
+      const data = await this.apiGet<{ events: TimeTreeRawEvent[] }>(
+        `/calendar/${calendarId}/events?year=${cursor.getFullYear()}&month=${cursor.getMonth() + 1}`,
       );
-      events.push(...next.events);
-      chunk = next.chunk;
-      since = next.since;
+      for (const ev of data.events) {
+        if (!seen.has(ev.uuid)) {
+          seen.add(ev.uuid);
+          events.push(ev);
+        }
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     return events;
@@ -187,7 +188,7 @@ export class TimeTreeProvider implements CalendarProvider {
     }
     const currentCal = calendars.find(c => c.id === this.calendarId) || calendars[0];
 
-    const rawEvents = await this.fetchAllEvents(this.calendarId);
+    const rawEvents = await this.fetchMonthlyEvents(this.calendarId, from, to);
     const fromMs = from.getTime();
     const toMs = to.getTime();
 
@@ -217,7 +218,7 @@ export class TimeTreeProvider implements CalendarProvider {
     await Promise.all(
       calendars.map(async (cal) => {
         try {
-          const rawEvents = await this.fetchAllEvents(cal.id);
+          const rawEvents = await this.fetchMonthlyEvents(cal.id, from, to);
           const mapped = rawEvents
             .filter((ev) => {
               if (this.authorId !== undefined && ev.author_id !== this.authorId) return false;

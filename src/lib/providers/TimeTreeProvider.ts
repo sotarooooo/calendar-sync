@@ -1,6 +1,5 @@
 import type { CalendarProvider, CalendarEvent } from "@/lib/providers/CalendarProvider";
 import { randomUUID } from "crypto";
-import { createRequire } from "module";
 
 const API_BASE = "https://timetreeapp.com/api/v1";
 const USER_AGENT = "web/2.1.0/en";
@@ -23,6 +22,87 @@ interface TimeTreeCalendarMeta {
   color: number;
 }
 
+
+const DAY_MAP: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+
+function parseRRuleParts(rruleStr: string): Record<string, string> {
+  const str = rruleStr.replace(/^RRULE:/, "");
+  const parts: Record<string, string> = {};
+  for (const pair of str.split(";")) {
+    const [k, v] = pair.split("=");
+    if (k && v) parts[k] = v;
+  }
+  return parts;
+}
+
+function expandRRule(rruleStr: string, dtstart: Date, from: Date, to: Date): Date[] {
+  const parts = parseRRuleParts(rruleStr);
+  const freq = parts["FREQ"];
+  if (!freq) return [];
+
+  const interval = parts["INTERVAL"] ? parseInt(parts["INTERVAL"]) : 1;
+  const until = parts["UNTIL"] ? parseRRuleDate(parts["UNTIL"]) : null;
+  const count = parts["COUNT"] ? parseInt(parts["COUNT"]) : null;
+  const effectiveEnd = until && until < to ? until : to;
+
+  const results: Date[] = [];
+  let total = 0;
+
+  if (freq === "DAILY") {
+    const cursor = new Date(dtstart);
+    while (cursor <= effectiveEnd) {
+      if (cursor >= from) results.push(new Date(cursor));
+      if (count && ++total >= count) break;
+      cursor.setDate(cursor.getDate() + interval);
+    }
+  } else if (freq === "WEEKLY") {
+    const byDay = parts["BYDAY"]?.split(",").map(d => DAY_MAP[d]).filter(d => d !== undefined) ?? [dtstart.getDay()];
+    const cursor = new Date(dtstart);
+    cursor.setDate(cursor.getDate() - cursor.getDay());
+    while (cursor <= effectiveEnd) {
+      for (const day of byDay) {
+        const d = new Date(cursor);
+        d.setDate(d.getDate() + day);
+        d.setHours(dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds(), dtstart.getMilliseconds());
+        if (d >= dtstart && d >= from && d <= effectiveEnd) {
+          results.push(d);
+          if (count && ++total >= count) break;
+        }
+      }
+      if (count && total >= count) break;
+      cursor.setDate(cursor.getDate() + 7 * interval);
+    }
+  } else if (freq === "MONTHLY") {
+    const dayOfMonth = parts["BYMONTHDAY"] ? parseInt(parts["BYMONTHDAY"]) : dtstart.getDate();
+    const cursor = new Date(dtstart.getFullYear(), dtstart.getMonth(), dayOfMonth, dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds());
+    while (cursor <= effectiveEnd) {
+      if (cursor >= from) results.push(new Date(cursor));
+      if (count && ++total >= count) break;
+      cursor.setMonth(cursor.getMonth() + interval);
+      cursor.setDate(dayOfMonth);
+    }
+  } else if (freq === "YEARLY") {
+    const cursor = new Date(dtstart);
+    while (cursor <= effectiveEnd) {
+      if (cursor >= from) results.push(new Date(cursor));
+      if (count && ++total >= count) break;
+      cursor.setFullYear(cursor.getFullYear() + interval);
+    }
+  }
+
+  return results;
+}
+
+function parseRRuleDate(s: string): Date {
+  const clean = s.replace(/[Z]/g, "");
+  if (clean.length >= 15) {
+    return new Date(Date.UTC(
+      parseInt(clean.slice(0, 4)), parseInt(clean.slice(4, 6)) - 1, parseInt(clean.slice(6, 8)),
+      parseInt(clean.slice(9, 11)), parseInt(clean.slice(11, 13)), parseInt(clean.slice(13, 15)),
+    ));
+  }
+  return new Date(Date.UTC(parseInt(clean.slice(0, 4)), parseInt(clean.slice(4, 6)) - 1, parseInt(clean.slice(6, 8))));
+}
 
 const isServerless = !!process.env["VERCEL"];
 
@@ -214,9 +294,7 @@ export class TimeTreeProvider implements CalendarProvider {
     return combined;
   }
 
-  private async expandRecurringEvents(events: TimeTreeRawEvent[], from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
-    const _require = createRequire(import.meta.url);
-    const { RRule } = _require("rrule");
+  private expandRecurringEvents(events: TimeTreeRawEvent[], from: Date, to: Date): TimeTreeRawEvent[] {
     const result: TimeTreeRawEvent[] = [];
 
     for (const ev of events) {
@@ -230,8 +308,7 @@ export class TimeTreeProvider implements CalendarProvider {
 
       for (const rruleStr of ev.recurrences) {
         try {
-          const rule = RRule.fromString(`${rruleStr}\nDTSTART:${dtstart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`);
-          const occurrences = rule.between(from, to, true);
+          const occurrences = expandRRule(rruleStr, dtstart, from, to);
           for (const occ of occurrences) {
             result.push({
               ...ev,

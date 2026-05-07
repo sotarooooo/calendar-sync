@@ -167,6 +167,7 @@ export class TimeTreeProvider implements CalendarProvider {
       const data = await this.apiGet<{ events: TimeTreeRawEvent[] }>(
         `/calendar/${calendarId}/events?year=${cursor.getFullYear()}&month=${cursor.getMonth() + 1}`,
       );
+      console.log(`[TimeTree] monthly calId=${calendarId} ${cursor.getFullYear()}-${cursor.getMonth() + 1}: ${data.events.length} raw events`);
       for (const ev of data.events) {
         if (!seen.has(ev.uuid)) {
           seen.add(ev.uuid);
@@ -176,6 +177,7 @@ export class TimeTreeProvider implements CalendarProvider {
       cursor.setMonth(cursor.getMonth() + 1);
     }
 
+    console.log(`[TimeTree] fetchMonthlyEvents total: ${events.length} unique events`);
     return events;
   }
 

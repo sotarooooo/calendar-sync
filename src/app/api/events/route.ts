@@ -50,7 +50,10 @@ export async function GET(request: Request) {
 
     // 並行取得
     const [ttEvents, gcEvents] = await Promise.all([
-      timetree.getAllEvents(start, end).catch((err) => {
+      timetree.getAllEvents(start, end).then((events) => {
+        console.log(`[Events API] TimeTree: ${events.length} events`);
+        return events;
+      }).catch((err) => {
         console.error("TimeTree fetch error:", err);
         return [];
       }),

@@ -24,6 +24,8 @@ interface TimeTreeCalendarMeta {
 
 
 const DAY_MAP: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+const MS_PER_DAY = 86400000;
+const MS_PER_WEEK = 7 * MS_PER_DAY;
 
 function parseRRuleParts(rruleStr: string): Record<string, string> {
   const str = rruleStr.replace(/^RRULE:/, "");
@@ -46,47 +48,92 @@ function expandRRule(rruleStr: string, dtstart: Date, from: Date, to: Date): Dat
   const effectiveEnd = until && until < to ? until : to;
 
   const results: Date[] = [];
-  let total = 0;
+
+  const h = dtstart.getUTCHours();
+  const m = dtstart.getUTCMinutes();
+  const s = dtstart.getUTCSeconds();
+  const ms = dtstart.getUTCMilliseconds();
 
   if (freq === "DAILY") {
-    const cursor = new Date(dtstart);
-    while (cursor <= effectiveEnd) {
-      if (cursor >= from) results.push(new Date(cursor));
-      if (count && ++total >= count) break;
-      cursor.setDate(cursor.getDate() + interval);
+    const startMs = dtstart.getTime();
+    const stepMs = interval * MS_PER_DAY;
+    let cursor: number;
+    if (count) {
+      cursor = startMs;
+    } else {
+      const skip = Math.max(0, Math.floor((from.getTime() - startMs) / stepMs));
+      cursor = startMs + skip * stepMs;
+    }
+    let total = count ? Math.floor((cursor - startMs) / stepMs) : 0;
+    while (cursor <= effectiveEnd.getTime()) {
+      if (cursor >= from.getTime()) results.push(new Date(cursor));
+      total++;
+      if (count && total >= count) break;
+      cursor += stepMs;
     }
   } else if (freq === "WEEKLY") {
-    const byDay = parts["BYDAY"]?.split(",").map(d => DAY_MAP[d]).filter(d => d !== undefined) ?? [dtstart.getDay()];
-    const cursor = new Date(dtstart);
-    cursor.setDate(cursor.getDate() - cursor.getDay());
-    while (cursor <= effectiveEnd) {
+    const byDay = parts["BYDAY"]?.split(",").map(d => DAY_MAP[d]).filter(d => d !== undefined) ?? [dtstart.getUTCDay()];
+    const startSunday = dtstart.getTime() - dtstart.getUTCDay() * MS_PER_DAY;
+    const stepMs = interval * MS_PER_WEEK;
+    let weekStart: number;
+    if (count) {
+      weekStart = startSunday;
+    } else {
+      const skip = Math.max(0, Math.floor((from.getTime() - startSunday - 7 * MS_PER_DAY) / stepMs));
+      weekStart = startSunday + skip * stepMs;
+    }
+    let total = count ? Math.floor((weekStart - startSunday) / stepMs) * byDay.length : 0;
+    while (weekStart <= effectiveEnd.getTime() + MS_PER_WEEK) {
       for (const day of byDay) {
-        const d = new Date(cursor);
-        d.setDate(d.getDate() + day);
-        d.setHours(dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds(), dtstart.getMilliseconds());
-        if (d >= dtstart && d >= from && d <= effectiveEnd) {
+        const d = new Date(weekStart + day * MS_PER_DAY);
+        d.setUTCHours(h, m, s, ms);
+        const t = d.getTime();
+        if (t >= dtstart.getTime() && t >= from.getTime() && t <= effectiveEnd.getTime()) {
           results.push(d);
-          if (count && ++total >= count) break;
         }
+        total++;
+        if (count && total >= count) break;
       }
       if (count && total >= count) break;
-      cursor.setDate(cursor.getDate() + 7 * interval);
+      weekStart += stepMs;
     }
   } else if (freq === "MONTHLY") {
-    const dayOfMonth = parts["BYMONTHDAY"] ? parseInt(parts["BYMONTHDAY"]) : dtstart.getDate();
-    const cursor = new Date(dtstart.getFullYear(), dtstart.getMonth(), dayOfMonth, dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds());
-    while (cursor <= effectiveEnd) {
-      if (cursor >= from) results.push(new Date(cursor));
-      if (count && ++total >= count) break;
-      cursor.setMonth(cursor.getMonth() + interval);
-      cursor.setDate(dayOfMonth);
+    const dayOfMonth = parts["BYMONTHDAY"] ? parseInt(parts["BYMONTHDAY"]) : dtstart.getUTCDate();
+    let year: number, month: number;
+    if (count) {
+      year = dtstart.getUTCFullYear();
+      month = dtstart.getUTCMonth();
+    } else {
+      const diffMonths = (from.getUTCFullYear() - dtstart.getUTCFullYear()) * 12 + (from.getUTCMonth() - dtstart.getUTCMonth());
+      const skip = Math.max(0, Math.floor(diffMonths / interval) - 1) * interval;
+      year = dtstart.getUTCFullYear();
+      month = dtstart.getUTCMonth() + skip;
+    }
+    let total = 0;
+    while (true) {
+      const d = new Date(Date.UTC(year, month, dayOfMonth, h, m, s, ms));
+      if (d > effectiveEnd) break;
+      if (d >= from) results.push(d);
+      total++;
+      if (count && total >= count) break;
+      month += interval;
     }
   } else if (freq === "YEARLY") {
-    const cursor = new Date(dtstart);
-    while (cursor <= effectiveEnd) {
-      if (cursor >= from) results.push(new Date(cursor));
-      if (count && ++total >= count) break;
-      cursor.setFullYear(cursor.getFullYear() + interval);
+    let year: number;
+    if (count) {
+      year = dtstart.getUTCFullYear();
+    } else {
+      const skip = Math.max(0, Math.floor((from.getUTCFullYear() - dtstart.getUTCFullYear()) / interval) - 1) * interval;
+      year = dtstart.getUTCFullYear() + skip;
+    }
+    let total = 0;
+    while (true) {
+      const d = new Date(Date.UTC(year, dtstart.getUTCMonth(), dtstart.getUTCDate(), h, m, s, ms));
+      if (d > effectiveEnd) break;
+      if (d >= from) results.push(d);
+      total++;
+      if (count && total >= count) break;
+      year += interval;
     }
   }
 

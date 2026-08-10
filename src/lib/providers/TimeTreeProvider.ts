@@ -326,15 +326,28 @@ export class TimeTreeProvider implements CalendarProvider {
   }
 
   private async fetchAllEvents(calendarId: number, from: Date, to: Date): Promise<TimeTreeRawEvent[]> {
-    const [syncEvents, recurringEvents] = await Promise.all([
+    const [syncEvents, monthlyRecurring] = await Promise.all([
       this.fetchSyncEvents(calendarId),
       this.fetchRecurringEvents(calendarId, from, to),
     ]);
 
-    const seen = new Set(syncEvents.map((ev) => ev.uuid));
-    const combined = [...syncEvents];
-    for (const ev of recurringEvents) {
+    const regular: TimeTreeRawEvent[] = [];
+    const recurringTemplates: TimeTreeRawEvent[] = [];
+    for (const ev of syncEvents) {
+      if (ev.recurrences && ev.recurrences.length > 0) {
+        recurringTemplates.push(ev);
+      } else {
+        regular.push(ev);
+      }
+    }
+
+    const expandedFromSync = this.expandRecurringEvents(recurringTemplates, from, to);
+
+    const seen = new Set<string>();
+    const combined: TimeTreeRawEvent[] = [];
+    for (const ev of [...regular, ...expandedFromSync, ...monthlyRecurring]) {
       if (!seen.has(ev.uuid)) {
+        seen.add(ev.uuid);
         combined.push(ev);
       }
     }
@@ -350,13 +363,26 @@ export class TimeTreeProvider implements CalendarProvider {
         continue;
       }
 
+      const rrules = ev.recurrences.filter(s => s.startsWith("RRULE:"));
+      const exdates = new Set(
+        ev.recurrences
+          .filter(s => s.startsWith("EXDATE:"))
+          .map(s => parseRRuleDate(s.replace(/^EXDATE:/, "")).getTime()),
+      );
+
+      if (rrules.length === 0) {
+        result.push(ev);
+        continue;
+      }
+
       const duration = ev.end_at - ev.start_at;
       const dtstart = new Date(ev.start_at);
 
-      for (const rruleStr of ev.recurrences) {
+      for (const rruleStr of rrules) {
         try {
           const occurrences = expandRRule(rruleStr, dtstart, from, to);
           for (const occ of occurrences) {
+            if (exdates.has(occ.getTime())) continue;
             result.push({
               ...ev,
               uuid: `${ev.uuid}_${occ.getTime()}`,
